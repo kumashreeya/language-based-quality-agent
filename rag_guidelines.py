@@ -53,9 +53,25 @@ def read_document(path):
 
 def detect_language_from_path(path, title=""):
     lower = (path + " " + title).lower()
-    for lang in ["python","java","javascript","typescript","cpp","c++","csharp","c#","go","rust","kotlin","swift","ruby","php","sql","delphi","visualbasic","visual basic"]:
-        if lang in lower:
-            return lang.replace("c++","cpp").replace("c#","csharp").replace("visual basic","visualbasic")
+    # Check multi-word / longer names first to avoid false matches (e.g. "c" in "csharp")
+    ordered_checks = [
+        ("javascript", "javascript"), ("typescript", "typescript"),
+        ("visual basic", "visualbasic"), ("visualbasic", "visualbasic"),
+        ("csharp", "csharp"), ("c#", "csharp"),
+        ("cpp", "cpp"), ("c++", "cpp"),
+        ("python", "python"), ("java", "java"),
+        ("go", "go"), ("rust", "rust"), ("kotlin", "kotlin"),
+        ("swift", "swift"), ("ruby", "ruby"), ("php", "php"),
+        ("sql", "sql"), ("delphi", "delphi"),
+        ("r_", "r"),  # e.g. r_google.pdf
+    ]
+    for pattern, lang in ordered_checks:
+        if pattern in lower:
+            return lang
+    # Check for C last — use word-boundary-like matching to avoid false positives
+    import re
+    if re.search(r'(?:^|[_/\\. ])c(?:[_/\\. ]|$)', lower):
+        return "c"
     return "general"
 
 class GuidelinesRAG:
