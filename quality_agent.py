@@ -336,6 +336,35 @@ def build_agent():
     graph.add_edge(START,"node_detect");graph.add_edge("node_detect","node_guidelines");graph.add_edge("node_guidelines","node_pick_tools");graph.add_edge("node_pick_tools","node_run_tools");graph.add_edge("node_run_tools","node_evaluate");graph.add_conditional_edges("node_evaluate",should_continue);graph.add_edge("node_report",END)
     return graph.compile()
 
+PIPELINE_STEPS = [
+    ("node_detect", "Language Detection", node_detect),
+    ("node_guidelines", "RAG Guidelines Lookup", node_guidelines),
+    ("node_pick_tools", "Tool Selection (Brain)", node_pick_tools),
+    ("node_run_tools", "Running Analysis Tools", node_run_tools),
+    ("node_evaluate", "LLM Evaluation", node_evaluate),
+    ("node_report", "Report Generation", node_report),
+]
+
+def run_pipeline_stepwise(code, mode="auto", user_request=""):
+    """Run the quality pipeline step by step, yielding (step_name, label, state) after each."""
+    state = {
+        "code": code, "mode": mode, "user_request": user_request,
+        "detected_language": "", "guidelines_context": "", "guideline_checks": "",
+        "tools_to_run": [], "tool_results": "", "interpretation": "",
+        "final_report": "", "loop_count": 0, "max_loops": 3,
+    }
+    for step_id, label, fn in PIPELINE_STEPS:
+        state = fn(state)
+        yield step_id, label, dict(state)
+
+def make_initial_state(code, mode="auto", user_request=""):
+    return {
+        "code": code, "mode": mode, "user_request": user_request,
+        "detected_language": "", "guidelines_context": "", "guideline_checks": "",
+        "tools_to_run": [], "tool_results": "", "interpretation": "",
+        "final_report": "", "loop_count": 0, "max_loops": 3,
+    }
+
 def main():
     agent=build_agent()
     print("="*60);print("QUALITY AGENT v7 (Guidelines-Driven | RAG Decides)");print("="*60)
